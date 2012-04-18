@@ -1,0 +1,8 @@
+
+    [deluge.plugin.core]
+    NetWatcher = netwatcher:CorePlugin
+    [deluge.plugin.gtkui]
+    NetWatcher = netwatcher:GtkUIPlugin
+    [deluge.plugin.web]
+    NetWatcher = netwatcher:WebUIPlugin
+    
