@@ -42,20 +42,71 @@ from deluge.plugins.pluginbase import CorePluginBase
 import deluge.component as component
 import deluge.configmanager
 from deluge.core.rpcserver import export
+from twisted.internet import reactor, utils, defer
 
 DEFAULT_PREFS = {
-    "test":"NiNiNi"
+    "ip_addresses": [],
+    "check_rate": 10,   # minutes
 }
 
+
 class Core(CorePluginBase):
+
     def enable(self):
-        self.config = deluge.configmanager.ConfigManager("netwatcher.conf", DEFAULT_PREFS)
+        self.config = deluge.configmanager.ConfigManager("netwatcher.conf",
+                                                         DEFAULT_PREFS)
+        self.do_schedule()
 
     def disable(self):
-        pass
+        self.timer.cancel()
 
     def update(self):
         pass
+
+    @staticmethod
+    def regulate_torrents(scan_result):
+        """Resume/Pause all torrents if `scan_result` is 'Free'/'Busy'."""
+        for torrent in component.get("Core").torrentmanager.torrents.values():
+            status = torrent.get_status([])     # empty keys -> full status
+            if scan_result == 'Busy' and not status['paused']:
+                log.info("Pausing '{status[name]}' from state: {status[state]}"
+                         .format(status=status))
+                torrent.pause()
+            elif scan_result == 'Free' and status['paused']:
+                log.info("Resuming '{status[name]}' from state: {status[state]}"
+                         .format(status=status))
+                torrent.resume()
+
+    def do_schedule(self, timer=True):
+        """Schedule of network scan and subsequent torrent regulation."""
+        d = self._quick_scan()
+        d.addCallback(self.regulate_torrents)
+
+        if timer:
+            self.timer = reactor.callLater(self.config["check_rate"] * 60,
+                                           self.do_schedule)
+
+    def _quick_scan(self):
+        """Return 'Busy' if any of the known addresses is alive, 'Free'
+        otherwise.
+
+        The scan is performed through ping requests.
+
+        """
+        # Ping exit codes:
+        # 0 - the address is alive (online)
+        # 1 - the address is not alive (offline)
+        # 2 - an error occured
+        log.debug("spawning ping requests to all known addresses..")
+        options = "{} -c1 -w1 -q"
+        outputs = [utils.getProcessValue("ping", options.format(addr).split())
+                   for addr in self.config["ip_addresses"]]
+
+        # XXX: the following two lines will shadow ping errors (exit == 2)
+        d = defer.gatherResults(outputs)
+        d.addCallback(lambda x: 'Free' if all(x) else 'Busy')
+
+        return d
 
     @export
     def set_config(self, config):
@@ -63,6 +114,9 @@ class Core(CorePluginBase):
         for key in config.keys():
             self.config[key] = config[key]
         self.config.save()
+
+        self.timer.cancel()
+        self.do_schedule()
 
     @export
     def get_config(self):

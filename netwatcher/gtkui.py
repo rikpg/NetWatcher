@@ -48,10 +48,13 @@ import deluge.common
 from common import get_resource
 
 class GtkUI(GtkPluginBase):
+
     def enable(self):
         self.glade = gtk.glade.XML(get_resource("config.glade"))
 
+        self.on_show_prefs()
         component.get("Preferences").add_page("NetWatcher", self.glade.get_widget("prefs_box"))
+
         component.get("PluginManager").register_hook("on_apply_prefs", self.on_apply_prefs)
         component.get("PluginManager").register_hook("on_show_prefs", self.on_show_prefs)
 
@@ -62,9 +65,9 @@ class GtkUI(GtkPluginBase):
 
     def on_apply_prefs(self):
         log.debug("applying prefs for NetWatcher")
-        config = {
-            "test":self.glade.get_widget("txt_test").get_text()
-        }
+        config = {}
+        config["check_rate"] = self.glade.get_widget("spin_check_rate").get_value_as_int()
+        config["ip_addresses"] = self.glade.get_widget("addresses_entry").get_text().split(',')
         client.netwatcher.set_config(config)
 
     def on_show_prefs(self):
@@ -72,4 +75,5 @@ class GtkUI(GtkPluginBase):
 
     def cb_get_config(self, config):
         "callback for on show_prefs"
-        self.glade.get_widget("txt_test").set_text(config["test"])
+        self.glade.get_widget("spin_check_rate").set_value(config["check_rate"])
+        self.glade.get_widget("addresses_entry").set_text(','.join(config["ip_addresses"]))
