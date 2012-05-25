@@ -68,11 +68,12 @@ class Core(CorePluginBase):
         """Resume/Pause all torrents if `scan_result` is 'Free'/'Busy'."""
         for torrent in component.get("Core").torrentmanager.torrents.values():
             status = torrent.get_status([])     # empty keys -> full status
-            if scan_result == 'Busy' and not status['paused']:
+            if scan_result == 'Busy' and status['state'] != 'Paused':
+            #if scan_result == 'Busy' and not status['paused']:
                 log.info("Pausing '{status[name]}' from state: {status[state]}"
                          .format(status=status))
                 torrent.pause()
-            elif scan_result == 'Free' and status['paused']:
+            elif scan_result == 'Free' and status['state'] == 'Paused':
                 log.info("Resuming '{status[name]}' from state: {status[state]}"
                          .format(status=status))
                 torrent.resume()
