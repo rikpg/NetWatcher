@@ -1,4 +1,4 @@
-README
+README.md
 setup.py
 NetWatcher.egg-info/PKG-INFO
 NetWatcher.egg-info/SOURCES.txt
