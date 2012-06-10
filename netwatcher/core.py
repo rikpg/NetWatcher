@@ -44,10 +44,22 @@ import deluge.configmanager
 from deluge.core.rpcserver import export
 from twisted.internet import reactor, utils, defer
 
+import os.path
+
+
 DEFAULT_PREFS = {
     "ip_addresses": [],
     "check_rate": 10,   # minutes
+    "custom_log": False,
+    "log_dir": os.path.expanduser('~'),
 }
+
+
+# custom logging
+import logging
+logger = logging.getLogger("NetWatcher")
+logger.parent = 0
+logger.setLevel(logging.INFO)
 
 
 class Core(CorePluginBase):
@@ -55,6 +67,18 @@ class Core(CorePluginBase):
     def enable(self):
         self.config = deluge.configmanager.ConfigManager("netwatcher.conf",
                                                          DEFAULT_PREFS)
+
+        if self.config["custom_log"]:
+            #TODO: The changes are applied at startup, so there's need for
+            #      a restart in order to log correctly
+            file_path = os.path.join(self.config["log_dir"], 'netwatcher.log')
+            fh = logging.FileHandler(file_path)
+            fh.setLevel(logging.INFO)
+            formatter = logging.Formatter("[%(asctime)s] %(message)s",
+                                          datefmt="%b-%d %H:%M")
+            fh.setFormatter(formatter)
+            logger.addHandler(fh)
+
         self.do_schedule()
 
     def disable(self):
@@ -70,12 +94,19 @@ class Core(CorePluginBase):
             status = torrent.get_status([])     # empty keys -> full status
             if scan_result == 'Busy' and status['state'] != 'Paused':
             #if scan_result == 'Busy' and not status['paused']:
-                log.info("Pausing '{status[name]}' from state: {status[state]}"
-                         .format(status=status))
+                msg = ("Pausing {status[name]!r} from state: {status[state]}"
+                      .format(status=status))
+                log.info(msg)
+                logger.info(msg)
+
                 torrent.pause()
+
             elif scan_result == 'Free' and status['state'] == 'Paused':
-                log.info("Resuming '{status[name]}' from state: {status[state]}"
-                         .format(status=status))
+                msg = ("Resuming {status[name]!r} from state: {status[state]}"
+                      .format(status=status))
+                log.info(msg)
+                logger.info(msg)
+
                 torrent.resume()
 
     def do_schedule(self, timer=True):

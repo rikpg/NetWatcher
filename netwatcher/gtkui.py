@@ -68,6 +68,9 @@ class GtkUI(GtkPluginBase):
         config = {}
         config["check_rate"] = self.glade.get_widget("spin_check_rate").get_value_as_int()
         config["ip_addresses"] = self.glade.get_widget("addresses_entry").get_text().split(',')
+        config["custom_log"] = self.glade.get_widget("logging_check_button").get_active()
+        config["log_dir"] = self.glade.get_widget("custom_logging_path").get_filename()
+
         client.netwatcher.set_config(config)
 
     def on_show_prefs(self):
@@ -77,3 +80,5 @@ class GtkUI(GtkPluginBase):
         "callback for on show_prefs"
         self.glade.get_widget("spin_check_rate").set_value(config["check_rate"])
         self.glade.get_widget("addresses_entry").set_text(','.join(config["ip_addresses"]))
+        self.glade.get_widget("logging_check_button").set_active(config["custom_log"])
+        self.glade.get_widget("custom_logging_path").set_filename(config["log_dir"])
