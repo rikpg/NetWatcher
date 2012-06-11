@@ -79,6 +79,11 @@ class Core(CorePluginBase):
             fh.setFormatter(formatter)
             logger.addHandler(fh)
 
+        else:
+            logger.addHandler(logging.NullHanlder())
+
+        logger.info('## Starting New Session ##')
+
         self.do_schedule()
 
     def disable(self):
