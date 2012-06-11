@@ -94,7 +94,7 @@ class Core(CorePluginBase):
             status = torrent.get_status([])     # empty keys -> full status
             if scan_result == 'Busy' and status['state'] != 'Paused':
             #if scan_result == 'Busy' and not status['paused']:
-                msg = ("Pausing {status[name]!r} from state: {status[state]}"
+                msg = ("Pausing '{status[name]}' from state: {status[state]}"
                       .format(status=status))
                 log.info(msg)
                 logger.info(msg)
@@ -102,7 +102,7 @@ class Core(CorePluginBase):
                 torrent.pause()
 
             elif scan_result == 'Free' and status['state'] == 'Paused':
-                msg = ("Resuming {status[name]!r} from state: {status[state]}"
+                msg = ("Resuming '{status[name]}' from state: {status[state]}"
                       .format(status=status))
                 log.info(msg)
                 logger.info(msg)
