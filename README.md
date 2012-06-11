@@ -8,7 +8,7 @@ _NetWatcher_ is a plugin for the [Deluge bittorrent client](http://deluge-torren
 What it does
 ------------
 
-__Ip Addresses__ is a list of comma separated ip addresses. These addresses are going to be cheked every x minutes.
+The __Ip Addresses__ setting is a list of comma separated ip addresses. These addresses are going to be cheked every X minutes.
 
 The rationale is:
 
