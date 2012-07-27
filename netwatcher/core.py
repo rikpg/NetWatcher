@@ -49,7 +49,7 @@ import os.path
 
 DEFAULT_PREFS = {
     "ip_addresses": [],
-    "check_rate": 10,   # minutes
+    "check_rate": 5,   # minutes
     "custom_log": False,
     "log_dir": os.path.expanduser('~'),
 }
@@ -71,7 +71,7 @@ class Core(CorePluginBase):
         if self.config["custom_log"]:
             #TODO: The changes are applied at startup, so there's need for
             #      a restart in order to log correctly
-            file_path = os.path.join(self.config["log_dir"], 'netwatcher.log')
+            file_path = os.path.join(self.config["log_dir"], 'netwatcher_log.txt')
             fh = logging.FileHandler(file_path)
             fh.setLevel(logging.INFO)
             formatter = logging.Formatter("[%(asctime)s] %(message)s",
@@ -98,7 +98,6 @@ class Core(CorePluginBase):
         for torrent in component.get("Core").torrentmanager.torrents.values():
             status = torrent.get_status([])     # empty keys -> full status
             if scan_result == 'Busy' and status['state'] != 'Paused':
-            #if scan_result == 'Busy' and not status['paused']:
                 msg = ("Pausing '{status[name]}' from state: {status[state]}"
                       .format(status=status))
                 log.info(msg)
