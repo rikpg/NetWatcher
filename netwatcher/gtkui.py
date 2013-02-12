@@ -47,6 +47,7 @@ import deluge.common
 
 from common import get_resource
 
+
 class GtkUI(GtkPluginBase):
 
     def enable(self):
@@ -67,7 +68,11 @@ class GtkUI(GtkPluginBase):
         log.debug("applying prefs for NetWatcher")
         config = {}
         config["check_rate"] = self.glade.get_widget("spin_check_rate").get_value_as_int()
+
+        config["scan_type"] = next(radio for radio in self.glade.get_widget("radio_scan_complete").get_group() if radio.get_active()).get_label()
+        self.glade.get_widget("addresses_entry").set_sensitive(config["scan_type"] == "Quick Scan")
         config["ip_addresses"] = [addr.strip() for addr in self.glade.get_widget("addresses_entry").get_text().split(',')]
+
         config["custom_log"] = self.glade.get_widget("logging_check_button").get_active()
         config["log_dir"] = self.glade.get_widget("custom_logging_path").get_filename()
 
@@ -77,8 +82,14 @@ class GtkUI(GtkPluginBase):
         client.netwatcher.get_config().addCallback(self.cb_get_config)
 
     def cb_get_config(self, config):
-        "callback for on show_prefs"
+        """callback for on_show_prefs"""
         self.glade.get_widget("spin_check_rate").set_value(config["check_rate"])
+
+        for r in self.glade.get_widget("radio_scan_complete").get_group():
+            r.set_active(r.get_label() == config["scan_type"])
+        self.glade.get_widget("addresses_entry").set_sensitive(config["scan_type"] == "Quick Scan")
         self.glade.get_widget("addresses_entry").set_text(', '.join(config["ip_addresses"]))
+
         self.glade.get_widget("logging_check_button").set_active(config["custom_log"])
+        self.glade.get_widget("custom_logging_path").set_sensitive(config["custom_log"])
         self.glade.get_widget("custom_logging_path").set_filename(config["log_dir"])

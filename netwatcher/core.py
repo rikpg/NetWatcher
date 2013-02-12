@@ -45,9 +45,10 @@ from deluge.core.rpcserver import export
 from twisted.internet import reactor, utils, defer
 
 import os.path
-
+import re
 
 DEFAULT_PREFS = {
+    "scan_type": "Complete Scan",
     "ip_addresses": [],
     "check_rate": 5,   # minutes
     "custom_log": False,
@@ -115,15 +116,37 @@ class Core(CorePluginBase):
 
     def do_schedule(self, timer=True):
         """Schedule of network scan and subsequent torrent regulation."""
-        d = self._quick_scan()
+        if self.config["scan_type"] == "Complete Scan":
+            d = self.complete_scan()
+        elif self.config["scan_type"] == "Quick Scan":
+            d = self.quick_scan()
+        else:
+            log.warning("Not expected scan_type option.")
+
         d.addCallback(self.regulate_torrents)
 
         if timer:
             self.timer = reactor.callLater(self.config["check_rate"] * 60,
                                            self.do_schedule)
 
-    def _quick_scan(self):
-        """Return 'Busy' if any of the known addresses is alive, 'Free'
+    def quick_scan(self):
+        """Performing a scan only on the addresses specified from the gui."""
+        log.info("performing a quick scan...")
+        return self._scan(self.config["ip_addresses"])
+
+    def complete_scan(self):
+        """Performing a complete scan on the range 192.168.1.2-255."""
+        log.info("performing a complete scan...")
+        d = self._find_my_ip_addr()
+        # building the complete range of ip-addr to be scanned: 192.168.1.2-255
+        d.addCallback(lambda x: ['192.168.1.{}'.format(i)
+                                 for i in xrange(2, 256) if i != int(x)])
+        d.addCallback(self._scan)
+        return d
+
+    @staticmethod
+    def _scan(addr_list):
+        """Return 'Busy' if any of the adreesses in `addr_list` is alive, 'Free'
         otherwise.
 
         The scan is performed through ping requests.
@@ -133,15 +156,21 @@ class Core(CorePluginBase):
         # 0 - the address is alive (online)
         # 1 - the address is not alive (offline)
         # 2 - an error occured
-        log.debug("spawning ping requests to all known addresses..")
+        log.debug("spawning ping requests...")
         options = "{} -c1 -w1 -q"
         outputs = [utils.getProcessValue("ping", options.format(addr).split())
-                   for addr in self.config["ip_addresses"]]
+                   for addr in addr_list]
 
         # XXX: the following two lines will shadow ping errors (exit == 2)
         d = defer.gatherResults(outputs)
         d.addCallback(lambda x: 'Free' if all(x) else 'Busy')
+        return d
 
+    @staticmethod
+    def _find_my_ip_addr(pattern=re.compile("inet addr:(192.168.1.(\d+))")):
+        """Find the machine ip-addr on which the deluge client is running."""
+        d = utils.getProcessOutput("/sbin/ifconfig")
+        d.addCallback(lambda s: pattern.search(s).group(2))
         return d
 
     @export
