@@ -81,14 +81,17 @@ class Core(CorePluginBase):
             logger.addHandler(fh)
 
         else:
-            logger.addHandler(logging.NullHanlder())
+            logger.addHandler(logging.NullHandler())
 
         logger.info('## Starting New Session ##')
 
         self.do_schedule()
 
     def disable(self):
-        self.timer.cancel()
+        try:
+            self.timer.cancel()
+        except AttributeError:
+            pass
 
     def update(self):
         pass
