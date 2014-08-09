@@ -295,7 +295,7 @@
                     <child>
                       <widget class="GtkSpinButton" id="spin_download_limit">
                         <property name="visible">True</property>
-                        <property name="sensitive">False</property>
+                        <property name="sensitive">True</property>
                         <property name="can_focus">True</property>
                         <property name="invisible_char">•</property>
                         <property name="primary_icon_activatable">False</property>
@@ -313,7 +313,7 @@
                     <child>
                       <widget class="GtkSpinButton" id="spin_upload_limit">
                         <property name="visible">True</property>
-                        <property name="sensitive">False</property>
+                        <property name="sensitive">True</property>
                         <property name="can_focus">True</property>
                         <property name="invisible_char">•</property>
                         <property name="primary_icon_activatable">False</property>

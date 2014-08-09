@@ -53,6 +53,8 @@ DEFAULT_PREFS = {
     "check_rate": 5,   # minutes
     "custom_log": False,
     "log_dir": os.path.expanduser('~'),
+    "download_limit": -1,
+    "upload_limit": -1,
 }
 
 

@@ -73,6 +73,9 @@ class GtkUI(GtkPluginBase):
         self.glade.get_widget("addresses_entry").set_sensitive(config["scan_type"] == "Quick Scan")
         config["ip_addresses"] = [addr.strip() for addr in self.glade.get_widget("addresses_entry").get_text().split(',')]
 
+        config["download_limit"] = self.glade.get_widget("spin_download_limit").get_value_as_int()
+        config["upload_limit"] = self.glade.get_widget("spin_upload_limit").get_value_as_int()
+
         config["custom_log"] = self.glade.get_widget("logging_check_button").get_active()
         config["log_dir"] = self.glade.get_widget("custom_logging_path").get_filename()
 
@@ -89,6 +92,9 @@ class GtkUI(GtkPluginBase):
             r.set_active(r.get_label() == config["scan_type"])
         self.glade.get_widget("addresses_entry").set_sensitive(config["scan_type"] == "Quick Scan")
         self.glade.get_widget("addresses_entry").set_text(', '.join(config["ip_addresses"]))
+
+        self.glade.get_widget("spin_download_limit").set_value(config["download_limit"])
+        self.glade.get_widget("spin_upload_limit").set_value(config["upload_limit"])
 
         self.glade.get_widget("logging_check_button").set_active(config["custom_log"])
         self.glade.get_widget("custom_logging_path").set_sensitive(config["custom_log"])
