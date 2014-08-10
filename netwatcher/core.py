@@ -53,9 +53,14 @@ DEFAULT_PREFS = {
     "check_rate": 5,   # minutes
     "custom_log": False,
     "log_dir": os.path.expanduser('~'),
-    "download_limit": -1,
-    "upload_limit": -1,
+    "download_limit": 0,    # zero as dl limit means pausing
+    "upload_limit": 0,
 }
+
+CONTROLLED_SETTINGS = [
+    "max_download_speed",
+    "max_upload_speed"
+]
 
 
 # custom logging
@@ -94,30 +99,68 @@ class Core(CorePluginBase):
             self.timer.cancel()
         except AttributeError:
             pass
+        self.__apply_set_functions()
 
     def update(self):
         pass
 
+    def __apply_set_functions(self):
+        """Have the core apply its bandwidth settings as specified in core.conf.
+        """
+        core_config = deluge.configmanager.ConfigManager("core.conf")
+        for setting in CONTROLLED_SETTINGS:
+            core_config.apply_set_functions(setting)
+        # Resume the session if necessary
+        component.get("Core").session.resume()
+
+    def regulate_torrents(self, scan_result):
+        """Regulate torrents activity depending on `scan_result` string value,
+        either 'Free' or 'Busy'.
+
+        With the max download speed parameter set to either 0 or -1 torrents
+        will be paused, otherwise the global max download/upload rate will be
+        accordingly limited.
+        """
+        session = component.get("Core").session
+        if scan_result == 'Free':
+            session.set_download_rate_limit(-1)
+            session.set_upload_rate_limit(-1)
+            self._wake_torrents()
+            return
+
+        if int(self.config["download_limit"]) == 0:
+            session.set_download_rate_limit(-1)
+            session.set_upload_rate_limit(-1)
+            self._sleep_torrents()
+        else:
+            # here self.config["download_limit"] is > than 0
+            session.set_download_rate_limit(int(self.config["download_limit"] * 1024))
+            session.set_upload_rate_limit(int(self.config["upload_limit"] * 1024))
+            self._wake_torrents()
+
     @staticmethod
-    def regulate_torrents(scan_result):
-        """Resume/Pause all torrents if `scan_result` is 'Free'/'Busy'."""
+    def _wake_torrents():
         for torrent in component.get("Core").torrentmanager.torrents.values():
             status = torrent.get_status([])     # empty keys -> full status
-            if scan_result == 'Busy' and status['state'] != 'Paused':
-                msg = ("Pausing '{status[name]}' from state: {status[state]}"
-                      .format(status=status))
-                log.info(msg)
-                logger.info(msg)
-
-                torrent.pause()
-
-            elif scan_result == 'Free' and status['state'] == 'Paused':
+            if status['state'] == 'Paused':
                 msg = ("Resuming '{status[name]}' from state: {status[state]}"
                       .format(status=status))
                 log.info(msg)
                 logger.info(msg)
 
                 torrent.resume()
+
+    @staticmethod
+    def _pause_torrents():
+        for torrent in component.get("Core").torrentmanager.torrents.values():
+            status = torrent.get_status([])     # empty keys -> full status
+            if status['state'] != 'Paused':
+                msg = ("Pausing '{status[name]}' from state: {status[state]}"
+                      .format(status=status))
+                log.info(msg)
+                logger.info(msg)
+
+                torrent.pause()
 
     def do_schedule(self, timer=True):
         """Schedule of network scan and subsequent torrent regulation."""
@@ -155,7 +198,6 @@ class Core(CorePluginBase):
         otherwise.
 
         The scan is performed through ping requests.
-
         """
         # Ping exit codes:
         # 0 - the address is alive (online)

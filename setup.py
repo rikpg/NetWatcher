@@ -42,7 +42,7 @@ from setuptools import setup
 __plugin_name__ = "NetWatcher"
 __author__ = "Riccardo Poggi"
 __author_email__ = "rik.poggi@gmail.com"
-__version__ = "0.1"
+__version__ = "0.2"
 __url__ = ""
 __license__ = "GPLv3"
 __description__ = ""
