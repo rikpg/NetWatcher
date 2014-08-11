@@ -10,3 +10,5 @@ netwatcher/common.py
 netwatcher/core.py
 netwatcher/gtkui.py
 netwatcher/webui.py
+netwatcher/data/config.glade
+netwatcher/data/netwatcher.js
