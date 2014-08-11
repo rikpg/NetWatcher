@@ -71,7 +71,9 @@ class GtkUI(GtkPluginBase):
 
         config["scan_type"] = next(radio for radio in self.glade.get_widget("radio_scan_complete").get_group() if radio.get_active()).get_label()
         self.glade.get_widget("addresses_entry").set_sensitive(config["scan_type"] == "Quick Scan")
-        config["ip_addresses"] = [addr.strip() for addr in self.glade.get_widget("addresses_entry").get_text().split(',')]
+        config["ip_addresses"] = sorted(parse_ip_addresses_string(self.glade.get_widget("addresses_entry").get_text()))
+        config["ip_whitelist"] = sorted(parse_ip_addresses_string(self.glade.get_widget("whitelist_entry").get_text()))
+
 
         config["download_limit"] = self.glade.get_widget("spin_download_limit").get_value_as_int()
         config["upload_limit"] = self.glade.get_widget("spin_upload_limit").get_value_as_int()
@@ -92,6 +94,7 @@ class GtkUI(GtkPluginBase):
             r.set_active(r.get_label() == config["scan_type"])
         self.glade.get_widget("addresses_entry").set_sensitive(config["scan_type"] == "Quick Scan")
         self.glade.get_widget("addresses_entry").set_text(', '.join(config["ip_addresses"]))
+        self.glade.get_widget("whitelist_entry").set_text(', '.join(config["ip_whitelist"]))
 
         self.glade.get_widget("spin_download_limit").set_value(config["download_limit"])
         self.glade.get_widget("spin_upload_limit").set_value(config["upload_limit"])
@@ -99,3 +102,28 @@ class GtkUI(GtkPluginBase):
         self.glade.get_widget("logging_check_button").set_active(config["custom_log"])
         self.glade.get_widget("custom_logging_path").set_sensitive(config["custom_log"])
         self.glade.get_widget("custom_logging_path").set_filename(config["log_dir"])
+
+
+def parse_ip_addresses_string(s):
+    """Accept a string as input and returns a set of addresses."""
+    s = s.strip().strip(',')
+    if not s:
+        return set()
+
+    result = set()
+    for entry in s.split(','):
+        entry = entry.strip()
+        base, addr = entry.rsplit('.', 1)
+        c = addr.split('-')
+        if len(c) == 1:
+            result.add(entry)
+        elif len(c) == 2:
+            try:
+                low, up = int(c[0]), int(c[1]) + 1
+            except ValueError:
+                continue
+
+            for i in xrange(low, up):
+                result.add('{}.{}'.format(base, i))
+
+    return result

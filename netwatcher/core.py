@@ -50,6 +50,7 @@ import re
 DEFAULT_PREFS = {
     "scan_type": "Complete Scan",
     "ip_addresses": [],
+    "ip_whitelist": [],
     "check_rate": 5,   # minutes
     "custom_log": False,
     "log_dir": os.path.expanduser('~'),
@@ -131,7 +132,7 @@ class Core(CorePluginBase):
         if int(self.config["download_limit"]) == 0:
             session.set_download_rate_limit(-1)
             session.set_upload_rate_limit(-1)
-            self._sleep_torrents()
+            self._pause_torrents()
         else:
             # here self.config["download_limit"] is > than 0
             session.set_download_rate_limit(int(self.config["download_limit"] * 1024))
@@ -180,15 +181,18 @@ class Core(CorePluginBase):
     def quick_scan(self):
         """Performing a scan only on the addresses specified from the gui."""
         log.info("performing a quick scan...")
-        return self._scan(self.config["ip_addresses"])
+        s = set(self.config["ip_addresses"]) - set(self.config["ip_whitelist"])
+        return self._scan(s)
 
     def complete_scan(self):
         """Performing a complete scan on the range 192.168.1.2-255."""
         log.info("performing a complete scan...")
         d = self._find_my_ip_addr()
         # building the complete range of ip-addr to be scanned: 192.168.1.2-255
-        d.addCallback(lambda x: ['192.168.1.{}'.format(i)
-                                 for i in xrange(2, 256) if i != int(x)])
+        complete = {'192.168.1.{}'.format(i) for i in xrange(2, 256)}
+        whitelist = set(self.config["ip_whitelist"])
+        d.addCallback(lambda x: complete - whitelist - set([x]))
+
         d.addCallback(self._scan)
         return d
 
@@ -226,8 +230,10 @@ class Core(CorePluginBase):
         for key in config.keys():
             self.config[key] = config[key]
         self.config.save()
-
-        self.timer.cancel()
+        try:
+            self.timer.cancel()
+        except AttributeError:
+            pass
         self.do_schedule()
 
     @export
